@@ -20,5 +20,11 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
             }
+            intent?.getStringExtra("open_screen")?.let {
+                if (it == "emergency") {
+                    flutterEngine.navigationChannel.pushRoute("/emergency");
+                }
+            }
+
     }
 }

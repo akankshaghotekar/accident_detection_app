@@ -3,6 +3,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <uses-permission android:name="android.permission.SEND_SMS"/>
+
 
     <application
         android:label="accident_detection_app"
@@ -31,6 +35,13 @@
             </intent-filter>
 
         </activity>
+        <activity
+            android:name=".FallAlertActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/NormalTheme"/>
+
         <service
                 android:name=".FallDetectionService"
                 android:foregroundServiceType="health"

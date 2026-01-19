@@ -86,26 +86,29 @@ class FallDetectionService : Service(), SensorEventListener {
                 .createNotificationChannel(channel)
         }
 
+        val intent = Intent(this, FallAlertActivity::class.java)
+
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("Possible Accident Detected")
             .setContentText("Tap to respond")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(
-                PendingIntent.getActivity(
-                    this,
-                    0,
-                    Intent(this, MainActivity::class.java),
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                ),
-                true
-            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setFullScreenIntent(fullScreenPendingIntent, true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
 
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(999, notification)
     }
+
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
