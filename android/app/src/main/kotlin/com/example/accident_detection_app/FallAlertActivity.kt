@@ -10,6 +10,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
+import android.app.NotificationManager
 import androidx.core.content.ContextCompat
 
 class FallAlertActivity : Activity() {
@@ -34,8 +35,25 @@ class FallAlertActivity : Activity() {
         setContentView(R.layout.activity_fall_alert)
 
         findViewById<Button>(R.id.btnSendSms).setOnClickListener {
+
+            val manager =
+                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+            manager.cancel(999)
+            
             checkAndSendSms()
         }
+        findViewById<Button>(R.id.btnImOk).setOnClickListener {
+
+            val manager =
+                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+            manager.cancel(999) 
+
+            finish()
+        }
+
+
     }
 
     private fun checkAndSendSms() {

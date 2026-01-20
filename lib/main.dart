@@ -1,8 +1,14 @@
+import 'package:accident_detection_app/permission/permission_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: PermissionGate(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

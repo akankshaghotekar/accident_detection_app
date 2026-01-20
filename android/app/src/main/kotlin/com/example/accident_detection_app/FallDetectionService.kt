@@ -6,6 +6,7 @@ import android.hardware.*
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import android.content.pm.ServiceInfo
 import kotlin.math.sqrt
 
 class FallDetectionService : Service(), SensorEventListener {
@@ -28,9 +29,22 @@ class FallDetectionService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(1, createPersistentNotification())
+
+        val notification = createPersistentNotification()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                1,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+            )
+        } else {
+            startForeground(1, notification)
+        }
+
         return START_STICKY
     }
+
 
     private fun createPersistentNotification(): Notification {
         val channelId = "fall_detection_service"
