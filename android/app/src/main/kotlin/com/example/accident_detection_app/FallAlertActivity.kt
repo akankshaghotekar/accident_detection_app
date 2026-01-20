@@ -12,48 +12,61 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import android.app.NotificationManager
 import androidx.core.content.ContextCompat
+import android.util.Log
 
 class FallAlertActivity : Activity() {
 
     private val SMS_PERMISSION_CODE = 101
     private val EMERGENCY_NUMBER = "7040040015"
+    private val TAG = "FallAlertActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Show on lock screen
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            )
-        }
+        try {
+            // Show on lock screen (Samsung compatible)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setShowWhenLocked(true)
+                setTurnScreenOn(true)
+                
+                // Samsung specific flags
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                window.addFlags(
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                )
+            }
 
-        setContentView(R.layout.activity_fall_alert)
+            setContentView(R.layout.activity_fall_alert)
 
-        findViewById<Button>(R.id.btnSendSms).setOnClickListener {
-
-            val manager =
-                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-            manager.cancel(999)
+            findViewById<Button>(R.id.btnSendSms).setOnClickListener {
+                dismissNotification()
+                checkAndSendSms()
+            }
             
-            checkAndSendSms()
-        }
-        findViewById<Button>(R.id.btnImOk).setOnClickListener {
-
-            val manager =
-                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-            manager.cancel(999) 
-
+            findViewById<Button>(R.id.btnImOk).setOnClickListener {
+                dismissNotification()
+                Toast.makeText(this, "Glad you're okay!", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+            
+            Log.d(TAG, "FallAlertActivity created successfully")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onCreate: ${e.message}", e)
             finish()
         }
+    }
 
-
+    private fun dismissNotification() {
+        try {
+            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            manager.cancel(999)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error dismissing notification: ${e.message}", e)
+        }
     }
 
     private fun checkAndSendSms() {
@@ -74,10 +87,17 @@ class FallAlertActivity : Activity() {
 
     private fun sendSms() {
         try {
-            val smsManager = SmsManager.getDefault()
-            val message =
-                "EMERGENCY ALERT \nPossible accident detected. Please check immediately."
+            // Use SmsManager compatible with all Android versions
+            val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                getSystemService(SmsManager::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                SmsManager.getDefault()
+            }
+            
+            val message = "EMERGENCY ALERT\nPossible accident detected. Please check immediately."
 
+            // Send SMS
             smsManager.sendTextMessage(
                 EMERGENCY_NUMBER,
                 null,
@@ -86,11 +106,14 @@ class FallAlertActivity : Activity() {
                 null
             )
 
-            Toast.makeText(this, "Emergency SMS sent", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Emergency SMS sent to $EMERGENCY_NUMBER", Toast.LENGTH_LONG).show()
+            Log.d(TAG, "SMS sent successfully")
+            
             finish()
 
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed to send SMS", Toast.LENGTH_LONG).show()
+            Log.e(TAG, "Failed to send SMS: ${e.message}", e)
+            Toast.makeText(this, "Failed to send SMS: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -109,9 +132,15 @@ class FallAlertActivity : Activity() {
         } else {
             Toast.makeText(
                 this,
-                "SMS permission denied",
+                "SMS permission denied. Cannot send emergency message.",
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+    
+    override fun onDestroy() {
+        // Ensure notification is dismissed
+        dismissNotification()
+        super.onDestroy()
     }
 }
