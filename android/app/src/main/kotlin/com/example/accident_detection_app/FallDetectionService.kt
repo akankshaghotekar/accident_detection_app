@@ -18,10 +18,17 @@ class FallDetectionService : Service(), SensorEventListener {
     
     companion object {
         private const val TAG = "FallDetectionService"
+        var isServiceRunning = false
     }
 
     override fun onCreate() {
         super.onCreate()
+        
+        isServiceRunning = true
+        
+        // Mark service as enabled
+        val prefs = getSharedPreferences("fall_detection_prefs", MODE_PRIVATE)
+        prefs.edit().putBoolean("service_enabled", true).apply()
         
         try {
             sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
@@ -78,7 +85,10 @@ class FallDetectionService : Service(), SensorEventListener {
                 startForeground(1, notification)
             }
             
-            Log.d(TAG, "Foreground service started")
+            // Schedule watchdog for service health monitoring
+            ServiceWatchdog.scheduleWatchdog(this)
+            
+            Log.d(TAG, "Foreground service started with watchdog")
             
         } catch (e: Exception) {
             Log.e(TAG, "Error starting foreground service: ${e.message}", e)
@@ -193,7 +203,7 @@ class FallDetectionService : Service(), SensorEventListener {
 
             val notification = NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("Possible Accident Detected")
+                .setContentTitle("⚠️ Possible Accident Detected")
                 .setContentText("Tap to respond")
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -221,11 +231,46 @@ class FallDetectionService : Service(), SensorEventListener {
     override fun onDestroy() {
         try {
             sensorManager.unregisterListener(this)
+            isServiceRunning = false
             Log.d(TAG, "Service destroyed, sensor unregistered")
+            
+            // Schedule restart if service was force-killed
+            val prefs = getSharedPreferences("fall_detection_prefs", MODE_PRIVATE)
+            val isEnabled = prefs.getBoolean("service_enabled", false)
+            
+            if (isEnabled) {
+                Log.d(TAG, "Service was force-killed, scheduling restart...")
+                scheduleServiceRestart()
+            }
+            
         } catch (e: Exception) {
             Log.e(TAG, "Error in onDestroy: ${e.message}", e)
         }
         super.onDestroy()
+    }
+    
+    private fun scheduleServiceRestart() {
+        try {
+            val restartIntent = Intent("com.example.accident_detection_app.RESTART_SERVICE")
+            restartIntent.setPackage(packageName)
+            sendBroadcast(restartIntent)
+            
+            Log.d(TAG, "Restart broadcast sent")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to schedule restart: ${e.message}", e)
+        }
+    }
+    
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        
+        Log.w(TAG, "Task removed from recent apps")
+        
+        // Restart service immediately
+        scheduleServiceRestart()
+        
+        // Ensure we restart
+        stopSelf()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

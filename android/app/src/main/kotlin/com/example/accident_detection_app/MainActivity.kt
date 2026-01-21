@@ -20,43 +20,73 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
-                if (call.method == "startService") {
-                    try {
-                        // Check if sensor permission is granted (Android 10+)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            val hasPermission = ContextCompat.checkSelfPermission(
-                                this,
-                                Manifest.permission.ACTIVITY_RECOGNITION
-                            ) == PackageManager.PERMISSION_GRANTED
-                            
-                            if (!hasPermission) {
-                                Log.e(TAG, "ACTIVITY_RECOGNITION permission not granted")
-                                result.error(
-                                    "PERMISSION_DENIED",
-                                    "Activity Recognition permission required",
-                                    null
-                                )
-                                return@setMethodCallHandler
+                when (call.method) {
+                    "startService" -> {
+                        try {
+                            // Check if sensor permission is granted (Android 10+)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                val hasPermission = ContextCompat.checkSelfPermission(
+                                    this,
+                                    Manifest.permission.ACTIVITY_RECOGNITION
+                                ) == PackageManager.PERMISSION_GRANTED
+                                
+                                if (!hasPermission) {
+                                    Log.e(TAG, "ACTIVITY_RECOGNITION permission not granted")
+                                    result.error(
+                                        "PERMISSION_DENIED",
+                                        "Activity Recognition permission required",
+                                        null
+                                    )
+                                    return@setMethodCallHandler
+                                }
                             }
+                            
+                            // Mark service as enabled in preferences
+                            val prefs = getSharedPreferences("fall_detection_prefs", MODE_PRIVATE)
+                            prefs.edit().putBoolean("service_enabled", true).apply()
+                            
+                            val intent = Intent(this, FallDetectionService::class.java)
+                            
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                startForegroundService(intent)
+                            } else {
+                                startService(intent)
+                            }
+                            
+                            Log.d(TAG, "Fall detection service started successfully")
+                            result.success(true)
+                            
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to start service: ${e.message}", e)
+                            result.error("SERVICE_ERROR", e.message, null)
                         }
-                        
-                        val intent = Intent(this, FallDetectionService::class.java)
-                        
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            startForegroundService(intent)
-                        } else {
-                            startService(intent)
-                        }
-                        
-                        Log.d(TAG, "Fall detection service started successfully")
-                        result.success(true)
-                        
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to start service: ${e.message}", e)
-                        result.error("SERVICE_ERROR", e.message, null)
                     }
-                } else {
-                    result.notImplemented()
+                    
+                    "stopService" -> {
+                        try {
+                            // Mark service as disabled
+                            val prefs = getSharedPreferences("fall_detection_prefs", MODE_PRIVATE)
+                            prefs.edit().putBoolean("service_enabled", false).apply()
+                            
+                            val intent = Intent(this, FallDetectionService::class.java)
+                            stopService(intent)
+                            
+                            Log.d(TAG, "Service stopped")
+                            result.success(true)
+                            
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to stop service: ${e.message}", e)
+                            result.error("SERVICE_ERROR", e.message, null)
+                        }
+                    }
+                    
+                    "isServiceRunning" -> {
+                        result.success(FallDetectionService.isServiceRunning)
+                    }
+                    
+                    else -> {
+                        result.notImplemented()
+                    }
                 }
             }
 
