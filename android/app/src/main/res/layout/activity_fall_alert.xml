@@ -8,7 +8,7 @@
     android:layout_height="match_parent">
 
     <TextView
-        android:text="⚠ Accident Detected"
+        android:text="Accident Detected"
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="#D32F2F"
