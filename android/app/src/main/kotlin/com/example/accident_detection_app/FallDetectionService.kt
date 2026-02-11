@@ -106,6 +106,11 @@ class FallDetectionService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == "TRIGGER_EMERGENCY") {
+            Log.w(TAG, "Emergency triggered from volume button")
+            showEmergencyNotification()
+            return START_NOT_STICKY
+        }
         try {
             val notification = createPersistentNotification()
 
