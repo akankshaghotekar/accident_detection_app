@@ -4,6 +4,11 @@ import android.view.accessibility.AccessibilityEvent
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import androidx.core.app.NotificationCompat
 import android.util.Log
 import android.os.Build
 import android.view.KeyEvent
@@ -66,16 +71,61 @@ class VolumeButtonAccessibilityService : AccessibilityService() {
     private fun triggerEmergency() {
         Log.w(TAG, "Emergency triggered via volume button")
 
-        val intent = Intent(this, FallDetectionService::class.java).apply {
-            action = "TRIGGER_EMERGENCY"
+        val intent = Intent(this, FallAlertActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
 
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val channelId = "emergency_channel"
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
+            val manager = getSystemService(NotificationManager::class.java)
+            val existingChannel = manager.getNotificationChannel(channelId)
+
+            if (existingChannel == null) {
+                    val channel = NotificationChannel(
+                    channelId,
+                    "Emergency Alerts",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Critical accident alerts"
+                    enableVibration(true)
+                    enableLights(true)
+                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                }
+
+                manager.createNotificationChannel(channel)
+            }
         }
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("Emergency Triggered")
+            .setContentText("Tap to respond")
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setFullScreenIntent(pendingIntent, true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setVibrate(longArrayOf(0, 500, 250, 500))
+            .build()
+
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(999, notification)
+
+        Log.d(TAG, "Emergency notification shown from volume button")
     }
+
+
 
 
     override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {}

@@ -302,6 +302,12 @@ class FallDetectionService : Service(), SensorEventListener {
         Log.w(TAG, "FALL CONFIRMED - Showing emergency notification")
         lastFallAlertTime = System.currentTimeMillis()
         showEmergencyNotification()
+        val intent = Intent(this, FallAlertActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        startActivity(intent)
+
         resetFallDetection()
     }
     
@@ -354,7 +360,7 @@ class FallDetectionService : Service(), SensorEventListener {
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Possible Accident Detected")
                 .setContentText("Tap to respond")
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setFullScreenIntent(fullScreenPendingIntent, true)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
